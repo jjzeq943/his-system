@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jing Yao Yan 診所雲端系統</title>
+    <title>Jing Yao Yan 診所雲端系統 - 穩定版</title>
     <style>
         :root { --primary: #2c7be5; --nurse: #6e41c1; --doctor: #00d97e; --danger: #e63757; --bg: #f9fbfd; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -17,12 +17,12 @@
         .bg-doctor { background: var(--doctor); color: white; }
         .bg-nurse { background: var(--nurse); color: white; }
 
-        /* 醫師 5 格輸入框樣式 */
-        .order-row { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; border: 1px solid #eee; }
+        /* 醫師 5 格輸入欄位樣式 */
+        .order-row { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px; border: 1px solid #eee; }
         
-        /* 護理 MAR 大紅字樣式 */
+        /* 護理端大紅字樣式 */
         .mar-card { border: 3px solid var(--nurse); border-radius: 12px; padding: 20px; margin-bottom: 20px; background: #fff; }
-        .med-dose-big { font-size: 48px; font-weight: 900; color: var(--danger); text-align: center; margin: 15px 0; border: 2px dashed #ffc1cc; border-radius: 10px; padding: 10px; }
+        .med-dose-big { font-size: 48px; font-weight: 900; color: var(--danger); text-align: center; margin: 15px 0; background: #fff5f5; border-radius: 8px; }
         
         .nav-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
         .role-tag { padding: 5px 15px; border-radius: 20px; color: white; font-size: 14px; }
@@ -32,8 +32,8 @@
 
 <div class="card">
     <div id="loginBox" style="max-width: 400px; margin: 60px auto; text-align: center;">
-        <h2 style="color:var(--primary);">Jing Yao Yan 雲端系統</h2>
-        <input id="username" type="text" placeholder="輸入帳號 (staff / doctor / nurse)">
+        <h2 style="color:var(--primary);">Jing Yao Yan 診所雲端同步</h2>
+        <input id="username" type="text" placeholder="請輸入帳號 (staff / doctor / nurse)">
         <button class="bg-staff" onclick="doLogin()">進入系統</button>
     </div>
 
@@ -41,54 +41,58 @@
         <div class="nav-header">
             <div>
                 <span id="roleTag" class="role-tag"></span>
-                <span id="userDisplay" style="margin-left:10px; font-weight:bold; color:#555;"></span>
+                <span id="userDisplay" style="margin-left:10px; font-weight:bold;"></span>
             </div>
-            <button onclick="location.reload()" style="width:auto; background:#eee; color:#333; padding: 5px 15px; margin:0;">登出</button>
+            <button onclick="location.reload()" style="width:auto; background:#eee; color:#333; padding: 5px 15px;">登出</button>
         </div>
 
         <div id="mod-staff" class="role-module hidden">
-            <h3>病患掛號處</h3>
+            <h3>掛號管理</h3>
+            <input id="s-key" placeholder="輸入姓名或 ID 查詢..." onkeyup="runSearch()">
+            <div id="s-results" style="margin-top:10px;"></div>
+            <hr>
+            <h3>新增病患並掛號</h3>
             <input id="nP-name" placeholder="病患姓名">
-            <input id="nP-id" placeholder="身分證號 (後三碼可)">
-            <button class="bg-staff" onclick="runCloudRegister()">完成掛號並同步雲端</button>
-            <hr style="margin:20px 0;">
-            <p style="color:#666;">※ 掛號後，醫師端選單將自動出現該病患。</p>
+            <input id="nP-id" placeholder="身分證號">
+            <button class="bg-staff" onclick="runCloudRegister()">儲存並掛號</button>
         </div>
 
         <div id="mod-doctor" class="role-module hidden">
             <h3>醫師診療醫囑</h3>
-            <label>選擇看診病患：</label>
+            <label>當前看診病患：</label>
             <select id="sel-clinic"></select>
             
-            <h4 style="margin: 15px 0 5px 0;">處方內容：</h4>
+            <h4 style="margin: 15px 0 5px 0;">開立處方：</h4>
             <div id="order-container">
                 </div>
-            <button class="bg-doctor" onclick="runCloudSubmit()">簽章並發送雲端醫囑</button>
+            <button class="bg-doctor" onclick="runCloudSubmit()">簽章並傳送處方</button>
         </div>
 
         <div id="mod-nurse" class="role-module hidden">
             <h3>護理給藥核對 (MAR)</h3>
-            <select id="sel-nurse" onchange="runRenderMAR()" style="border: 2px solid var(--nurse);"></select>
+            <select id="sel-nurse" onchange="runRenderMAR()"></select>
             <div id="marArea" style="margin-top:20px;"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // 🔴 已根據您的照片填入正確的雲端網址
- const CLOUD_URL = "https://script.google.com/macros/library/d/1lwINCcSRx5hlKHyHZ2440t1n58mUqlTl8tc7XEkZoPyO7-Ww_2FRBaDf/3";
-
-
+    // 您的正確雲端網址
+    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzw_EJSXLfrnp8xyJATDaNozelrtlztXbLdxiwFSNBcz6dlLYroCyplEfz7d-mTkuAO7/exec";
 
     let cloudData = { pts: [], queue: [], orders: [] };
 
-    // --- 同步邏輯 ---
+    // --- 連線核心 ---
     async function pull() {
         try {
-            const res = await fetch(CLOUD_URL);
+            const res = await fetch(CLOUD_URL + "?t=" + new Date().getTime(), {
+                method: "GET",
+                mode: "cors"
+            });
             cloudData = await res.json();
             updateDropdowns();
             if (sessionStorage.getItem("role") === "nurse") runRenderMAR();
+            console.log("資料同步成功");
         } catch (e) { console.log("同步中..."); }
     }
 
@@ -99,23 +103,23 @@
                 mode: 'no-cors', 
                 body: JSON.stringify(cloudData) 
             });
-            setTimeout(pull, 800); // 傳送後稍微延遲再拉回
-        } catch (e) { alert("網路連線不穩，請重試"); }
+            setTimeout(pull, 500); 
+        } catch (e) { console.log("傳送失敗"); }
     }
 
-    // --- 登入控制 ---
+    // --- 介面流程 ---
     function doLogin() {
         const user = document.getElementById("username").value.toLowerCase().trim();
-        if (!['staff', 'doctor', 'nurse'].includes(user)) return alert("請輸入正確職稱");
+        if (!['staff', 'doctor', 'nurse'].includes(user)) return alert("帳號請輸入 staff, doctor 或 nurse");
         
         sessionStorage.setItem("role", user);
         document.getElementById("loginBox").classList.add("hidden");
         document.getElementById("app").classList.remove("hidden");
         
         const tag = document.getElementById("roleTag");
-        tag.innerText = (user==='staff'?'櫃檯行政':user==='doctor'?'醫師處方':'護理核對');
+        tag.innerText = (user==='staff'?'櫃檯':user==='doctor'?'醫師':'護理');
         tag.className = 'role-tag bg-' + user;
-        document.getElementById("userDisplay").innerText = "使用者：" + user;
+        document.getElementById("userDisplay").innerText = user;
 
         document.querySelectorAll(".role-module").forEach(m => m.classList.add("hidden"));
         document.getElementById("mod-" + user).classList.remove("hidden");
@@ -126,7 +130,7 @@
             for (let i = 0; i < 5; i++) {
                 container.innerHTML += `
                     <div class="order-row">
-                        <input class="m-name" placeholder="藥名/處方">
+                        <input class="m-name" placeholder="藥名">
                         <input class="m-dose" placeholder="劑量">
                         <input class="m-freq" placeholder="頻率">
                         <input class="m-path" placeholder="途徑">
@@ -137,21 +141,41 @@
         setInterval(pull, 5000); 
     }
 
-    // --- 功能函式 ---
+    // --- 櫃檯功能 ---
+    function runSearch() {
+        const key = document.getElementById("s-key").value;
+        const res = document.getElementById("s-results");
+        res.innerHTML = "";
+        if (key.length < 1) return;
+        cloudData.pts.filter(p => p.name.includes(key) || p.id.includes(key)).forEach(p => {
+            res.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:white;">
+                <span>${p.name} (${p.id})</span>
+                <button onclick="addQueue('${p.id}')" style="width:auto; padding:5px 15px;" class="bg-staff">掛號</button>
+            </div>`;
+        });
+    }
+
     function runCloudRegister() {
         const name = document.getElementById("nP-name").value;
         const id = document.getElementById("nP-id").value;
-        if (!name || !id) return alert("請完整填寫");
-        cloudData.queue.push({ name, id });
-        push();
-        alert("病患 " + name + " 已掛號");
-        document.getElementById("nP-name").value = "";
-        document.getElementById("nP-id").value = "";
+        if (!name || !id) return alert("請輸入姓名與 ID");
+        if (!cloudData.pts.find(x => x.id === id)) cloudData.pts.push({ name, id });
+        addQueue(id);
     }
 
+    function addQueue(id) {
+        const p = cloudData.pts.find(x => x.id === id);
+        if (!cloudData.queue.find(x => x.id === id)) {
+            cloudData.queue.push(p);
+            push();
+            alert("掛號成功");
+        }
+    }
+
+    // --- 醫師功能 ---
     function runCloudSubmit() {
         const pName = document.getElementById("sel-clinic").value;
-        if (!pName) return alert("請選擇病患");
+        if (!pName) return alert("請先選擇病患");
         const rows = document.querySelectorAll(".order-row");
         let count = 0;
         rows.forEach(r => {
@@ -164,38 +188,35 @@
                 count++;
             }
         });
-        if(count === 0) return alert("請至少輸入一項藥品");
+        if (count === 0) return alert("請至少輸入一項處方");
         push();
-        alert("醫囑已傳送，系統將重新整理");
-        location.reload();
+        alert("醫囑已傳送至雲端");
+        location.reload(); 
     }
 
+    // --- 護理功能 (大紅字) ---
     function runRenderMAR() {
         const p = document.getElementById("sel-nurse").value;
         const area = document.getElementById("marArea");
         area.innerHTML = "";
         const myOrders = cloudData.orders.filter(o => o.pName === p);
-        if(myOrders.length === 0 && p !== "") {
-            area.innerHTML = "<p style='text-align:center; color:#888; padding:20px;'>此病患目前無待執行醫囑</p>";
-        }
-        myOrders.forEach((o) => {
+        myOrders.forEach((o, i) => {
             const div = document.createElement("div");
             div.className = "mar-card";
             div.innerHTML = `
                 <div style="color:#888; font-size:12px;">開單時間：${o.time}</div>
-                <div style="font-size:24px; font-weight:bold; margin-bottom:5px;">${o.m}</div>
+                <div style="font-size:24px; font-weight:bold; color:#333;">${o.m}</div>
                 <div class="med-dose-big">${o.d}</div>
-                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:18px; color:#333;">
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:18px;">
                     <span>頻率：${o.f}</span><span>途徑：${o.h}</span>
                 </div>
-                <button class="bg-nurse" style="margin-top:20px; height:60px; font-size:20px;" onclick="finishMed('${o.pName}', '${o.m}')">給藥正確 (完成核對)</button>
+                <button class="bg-nurse" style="margin-top:15px;" onclick="finishMed('${o.pName}', '${o.m}')">核對無誤，確認給藥</button>
             `;
             area.appendChild(div);
         });
     }
 
     function finishMed(pName, medName) {
-        if(!confirm("確定藥品與劑量正確？")) return;
         const idx = cloudData.orders.findIndex(o => o.pName === pName && o.m === medName);
         if (idx > -1) {
             cloudData.orders.splice(idx, 1);
@@ -206,11 +227,4 @@
     function updateDropdowns() {
         const html = cloudData.queue.map(p => `<option value="${p.name}">${p.name} (${p.id})</option>`).join("");
         document.getElementById("sel-clinic").innerHTML = html;
-        const nSelect = document.getElementById("sel-nurse");
-        const current = nSelect.value;
-        nSelect.innerHTML = '<option value="">-- 請選擇待核對病患 --</option>' + html;
-        nSelect.value = current;
-    }
-</script>
-</body>
-</html>
+        const nSelect = document.getElementById(
