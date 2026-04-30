@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>診所雲端同步系統</title>
+    <style>
+        /* 這裡保留您最喜歡的樣式，包括照片中的大紅字 */
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+        .hidden { display: none !important; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .btn-blue { background: #2c7be5; color: white; }
+        .btn-nurse { background: #6e41c1; color: white; }
+        .dose-red { font-size: 40px; color: #e63757; font-weight: bold; text-align: center; margin: 10px 0; }
+        .mar-card { border: 2px solid #6e41c1; border-radius: 10px; padding: 15px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div id="login-box">
+        <h2 style="text-align:center;">診所系統連線</h2>
+        <input type="text" id="user" placeholder="帳號 (staff / doctor / nurse)">
+        <button class="btn-blue" onclick="login()">進入系統</button>
+    </div>
+
+    <div id="app" class="hidden">
+        <h3 id="role-title"></h3>
+        
+        <div id="staff-view" class="hidden">
+            <input type="text" id="p-name" placeholder="病患姓名">
+            <button class="btn-blue" onclick="addPatient()">掛號</button>
+        </div>
+
+        <div id="doctor-view" class="hidden">
+            <select id="p-select"></select>
+            <input type="text" id="m-name" placeholder="藥名">
+            <input type="text" id="m-dose" placeholder="劑量">
+            <button class="btn-blue" style="background:#00d97e" onclick="sendOrder()">發送醫囑</button>
+        </div>
+
+        <div id="nurse-view" class="hidden">
+            <select id="n-select" onchange="renderMAR()"></select>
+            <div id="mar-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // https://script.google.com/macros/s/AKfycbzw_EJSXLfrnp8xyJAtDaNOze1rtlzXbLdxiwFSNBcz6dlLYroCyplEfz7d-mTkUAO7/exec
+    const CLOUD_URL = "您的_GOOGLE_GAS_網址";
+
+    let cloudData = { queue: [], orders: [] };
+
+    // 從雲端抓資料
+    async function pull() {
+        const res = await fetch(CLOUD_URL);
+        cloudData = await res.json();
+        updateUI();
+    }
+
+    // 推送資料到雲端
+    async function push() {
+        await fetch(CLOUD_URL, {
+            method: 'POST',
+            body: JSON.stringify(cloudData)
+        });
+        pull();
+    }
+
+    function login() {
+        const role = document.getElementById("user").value.toLowerCase();
+        if(!['staff','doctor','nurse'].includes(role)) return alert("帳號錯誤");
+        sessionStorage.setItem("role", role);
+        document.getElementById("login-box").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        document.getElementById("role-title").innerText = "權限：" + role;
+        document.getElementById(role + "-view").classList.remove("hidden");
+        pull();
+        setInterval(pull, 5000); // 每 5 秒自動跟雲端同步一次
+    }
+
+    function addPatient() {
+        const name = document.getElementById("p-name").value;
+        cloudData.queue.push(name);
+        push();
+        alert("掛號成功");
+    }
+
+    function sendOrder() {
+        const p = document.getElementById("p-select").value;
+        const m = document.getElementById("m-name").value;
+        const d = document.getElementById("m-dose").value;
+        cloudData.orders.push({p, m, d});
+        push();
+        alert("醫囑已傳送");
+    }
+
+    function renderMAR() {
+        const p = document.getElementById("n-select").value;
+        const list = document.getElementById("mar-list");
+        list.innerHTML = "";
+        cloudData.orders.filter(o => o.p === p).forEach((o, i) => {
+            list.innerHTML += `
+                <div class="mar-card">
+                    <b>藥名：${o.m}</b>
+                    <div class="dose-red">${o.d}</div>
+                    <button class="btn-nurse" onclick="finishOrder(${i})">核對完成</button>
+                </div>`;
+        });
+    }
+
+    function finishOrder(idx) {
+        cloudData.orders.splice(idx, 1);
+        push();
+    }
+
+    function updateUI() {
+        const opts = cloudData.queue.map(p => `<option value="${p}">${p}</option>`).join("");
+        document.getElementById("p-select").innerHTML = opts;
+        document.getElementById("n-select").innerHTML = '<option>--請選擇--</option>' + opts;
+    }
+</script>
+</body>
+</html>
