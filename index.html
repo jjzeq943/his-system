@@ -57,29 +57,35 @@
 </div>
 
 <script>
-    // 您的雲端連結 (已填入您的正確 exec 網址)
-    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzw_EJSXLfrnp8xyJAtDaNOze1rtlzXbLdxiwFSNBcz6dlLYroCyplEfz7d-mTkUAO7/exec";
+    // --- 修正後的正確網址 ---
+    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzw_EJSXLfrnp8xyJATDaNozelrtlztXbLdxiwFSNBcz6dlLYroCyplEfz7d-mTkuAO7/exec";
 
     let cloudData = { queue: [], orders: [] };
 
-    // --- 同步邏輯 ---
     async function pull() {
         try {
-            const res = await fetch(CLOUD_URL + "?t=" + Date.now());
-            const data = await res.json();
-            cloudData = data;
+            const res = await fetch(CLOUD_URL + "?t=" + Date.now(), {
+                method: "GET",
+                mode: "cors" // 確保開啟 CORS 模式
+            });
+            cloudData = await res.json();
             updateUI();
-        } catch (e) { console.log("正在嘗試同步資料..."); }
+        } catch (e) { 
+            console.log("資料同步中..."); 
+        }
     }
 
     async function push() {
         try {
-            await fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(cloudData) });
+            await fetch(CLOUD_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify(cloudData) 
+            });
             setTimeout(pull, 800);
         } catch (e) { }
     }
 
-    // --- 核心功能 ---
     function doLogin() {
         const u = document.getElementById("username").value.toLowerCase().trim();
         if(!['staff','doctor','nurse'].includes(u)) return alert("請輸入正確帳號");
@@ -139,7 +145,10 @@
         if(!hasOrder) return alert("請至少輸入一項處方");
         push();
         alert("醫囑已成功傳送");
-        location.reload();
+        // 改用 updateUI 而非 location.reload，體驗更順暢
+        updateUI();
+        // 清空輸入框
+        document.querySelectorAll(".order-row input").forEach(i => i.value = "");
     }
 
     function renderMAR() {
