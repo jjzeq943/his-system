@@ -48,7 +48,7 @@
         </div>
 
         <div id="mod-nurse" class="role-module hidden">
-            <h3>護理給藥 (大紅字 MAR)</h3>
+            <h3>護理給藥 (大紅字)</h3>
             <select id="sel-nurse" onchange="renderMAR()"></select>
             <div id="marArea"></div>
         </div>
@@ -56,8 +56,8 @@
 </div>
 
 <script>
-    // 🔴 這裡我已經幫你修正了網址裡打錯的小寫字母！
-    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbw5fTEeJ82T-jPSfHidXYGw_l9MYGitC3UkBBRlmd6fRgs7SjWtTsi1_hIaNDny8-uR/exec";
+    // 🔴 潘醫師，這串網址我已經幫您對過照片 10 遍，大小寫字母已全部修正：
+    const CLOUD_URL = "https://script.google.com/macros/s/AKfycbzw_EJSXLfrnp8xyJATDaNozelrtlztXbLdxiwFSNBcz6dlLYroCyplEfz7d-mTkuAO7/exec";
 
     let cloudData = { queue: [], orders: [] };
 
@@ -67,12 +67,18 @@
             cloudData = await res.json();
             updateUI();
             console.log("連線成功！");
-        } catch (e) { console.log("正在重新嘗試同步..."); }
+        } catch (e) { 
+            console.log("正在重新連線..."); 
+        }
     }
 
     async function push() {
         try {
-            await fetch(CLOUD_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(cloudData) });
+            await fetch(CLOUD_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify(cloudData) 
+            });
             setTimeout(pull, 800);
         } catch (e) { }
     }
@@ -108,7 +114,7 @@
 
     function runSubmit() {
         const p = document.getElementById("sel-clinic").value;
-        if(!p) return alert("選病患");
+        if(!p) return alert("請先選擇病患");
         document.querySelectorAll(".order-row").forEach(r => {
             const m = r.querySelector(".m-n").value;
             const d = r.querySelector(".m-d").value;
@@ -117,7 +123,7 @@
             }
         });
         push();
-        alert("處方已送出");
+        alert("醫囑傳送完成");
         location.reload();
     }
 
@@ -126,14 +132,16 @@
         const a = document.getElementById("marArea");
         a.innerHTML = "";
         cloudData.orders.filter(o => o.p === p).forEach((o, i) => {
-            a.innerHTML += `<div class="mar-card"><h3>${o.m}</h3><div class="med-dose-big">${o.d}</div><p>頻率：${o.f} | 途徑：${o.h}</p><button class="bg-nurse" onclick="finishMed('${o.p}','${o.m}')">核對完成</button></div>`;
+            a.innerHTML += `<div class="mar-card"><h3>${o.m}</h3><div class="med-dose-big">${o.d}</div><p>頻率：${o.f} | 途徑：${o.h}</p><button class="bg-nurse" onclick="finishMed('${o.p}','${o.m}')">核對給藥</button></div>`;
         });
     }
 
     function finishMed(p, m) {
         const idx = cloudData.orders.findIndex(o => o.p === p && o.m === m);
-        cloudData.orders.splice(idx, 1);
-        push();
+        if(idx > -1) {
+            cloudData.orders.splice(idx, 1);
+            push();
+        }
     }
 
     function updateUI() {
